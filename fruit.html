@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國小數學趣味秤重</title>
+    <style>
+        /* 基礎版面樣式 */
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background-color: #f7f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h2 { color: #2c3e50; margin-bottom: 20px; }
+
+        /* 水果展示區 */
+        .fruit-shelf {
+            display: flex;
+            justify-content: space-around;
+            background: #fdf6e2;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px dashed #f39c12;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .fruit-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.5s ease-in-out, opacity 0.5s;
+        }
+
+        .fruit-icon {
+            font-size: 40px;
+            margin-bottom: 5px;
+        }
+
+        /* 飛入箱子的 CSS 動畫效果 */
+        .fly-to-box {
+            animation: dropIntoBox 1s forwards ease-in-out;
+        }
+
+        @keyframes dropIntoBox {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            50% { transform: translateY(-30px) scale(1.2); }
+            100% { transform: translateY(180px) scale(0.6); opacity: 0; }
+        }
+
+        /* 箱子與動態計數器 */
+        .box-area {
+            margin: 20px 0;
+            position: relative;
+            height: 120px;
+        }
+
+        .box {
+            font-size: 70px;
+            line-height: 1;
+        }
+
+        .counter {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-top: 10px;
+            min-height: 30px;
+        }
+
+        /* 題目選項按鈕樣式 */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn-option {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px #2980b9;
+        }
+
+        /* 按鈕互動特效：懸停與點擊 */
+        .btn-option:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-option:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 #2980b9;
+        }
+
+        /* 答案反饋提示 */
+        .result-message {
+            margin-top: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        .correct { color: #27ae60; }
+        .wrong { color: #c0392b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🍎 趣味數學：請選水果放入箱子，讓總合剛好為 43g 🍏</h2>
+    
+    <!-- 水果架（上方） -->
+    <div class="fruit-shelf">
+        <div class="fruit-item" id="fruit-A"><span class="fruit-icon">🍎</span>A 蘋果<br>10g</div>
+        <div class="fruit-item" id="fruit-B"><span class="fruit-icon">🥑</span>B 芭樂<br>17g</div>
+        <div class="fruit-item" id="fruit-C"><span class="fruit-icon">🍐</span>C 梨子<br>13g</div>
+        <div class="fruit-item" id="fruit-D"><span class="fruit-icon">🍌</span>D 香蕉<br>15g</div>
+    </div>
+
+    <!-- 箱子與重量顯示（下方） -->
+    <div class="box-area">
+        <div class="box">📦</div>
+        <div class="counter" id="weight-display">目前重量：0 g</div>
+    </div>
+
+    <!-- 答題回饋 -->
+    <div class="result-message" id="result-text"></div>
+
+    <!-- 選項按鈕區 -->
+    <div class="options-grid">
+        <button class="btn-option" onclick="checkAnswer([10, 17, 13, 0], ['A', 'B', 'C'], true)">1. A + B + C</button>
+        <button class="btn-option" onclick="checkAnswer([10, 17, 0, 15], ['A', 'B', 'D'], false)">2. A + B + D</button>
+        <button class="btn-option" onclick="checkAnswer([0, 17, 13, 15], ['B', 'C', 'D'], false)">3. B + C + D</button>
+        <button class="btn-option" onclick="checkAnswer([0, 0, 13, 15], ['C', 'D'], false)">4. C + D</button>
+    </div>
+</div>
+
+<script>
+function checkAnswer(weights, activeFruits, isCorrect) {
+    // 1. 重設所有狀態
+    resetEffects();
+
+    // 2. 觸發水果「飛入箱子」的動畫
+    activeFruits.forEach(id => {
+        document.getElementById(`fruit-${id}`).classList.add('fly-to-box');
+    });
+
+    // 3. 數字跑馬燈累加動畫效果
+    let currentWeight = 0;
+    let targetWeight = weights.reduce((a, b) => a + b, 0);
+    let display = document.getElementById('weight-display');
+    
+    // 計算跑馬燈速度
+    let interval = setInterval(() => {
+        if (currentWeight < targetWeight) {
+            currentWeight += 1;
+            display.innerText = `目前重量：${currentWeight} g`;
+        } else {
+            clearInterval(interval);
+            // 4. 數字跑完後，顯示正確或錯誤提示
+            showResult(isCorrect, targetWeight);
+        }
+    }, 20); // 每 20 毫秒加 1g
+}
+
+function showResult(isCorrect, total) {
+    let resultText = document.getElementById('result-text');
+    if (isCorrect) {
+        resultText.innerHTML = `<span class="correct">🎉 答對了！ ${total}g 剛剛好！</span>`;
+    } else {
+        resultText.innerHTML = `<span class="wrong">❌ 不對喔，這樣加起來是 ${total}g，再試試看！</span>`;
+    }
+}
+
+function resetEffects() {
+    // 清除水果動畫 class 讓它可以重複觸發
+    ['A', 'B', 'C', 'D'].forEach(id => {
+        document.getElementById(`fruit-${id}`).classList.remove('fly-to-box');
+    });
+    document.getElementById('result-text').innerText = '';
+    document.getElementById('weight-display').innerText = '目前重量：0 g';
+}
+</script>
+
+</body>
+</html>
