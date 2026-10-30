@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>每日血糖健康紀錄本</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --bg: #f4f6f9;
+            --text: #333;
+            --border: #dcdde1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 10px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 550px; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        h1 { text-align: center; margin-bottom: 15px; font-size: 22px; color: var(--primary); }
+        
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600; color: #4b6584; }
+        input[type="number"], input[type="datetime-local"], textarea { 
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; outline: none; -webkit-appearance: none;
+        }
+        textarea { resize: vertical; min-height: 60px; }
+        input:focus, textarea:focus { border-color: #3498db; }
+        
+        .status-group { display: flex; gap: 15px; margin-top: 5px; }
+        .status-group label { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; color: var(--text); font-size: 15px; }
+        .status-group input[type="radio"] { width: 20px; height: 20px; cursor: pointer; }
+
+        .preview-container { margin-top: 10px; display: none; text-align: center; }
+        .preview-img { max-width: 100%; max-height: 120px; border-radius: 8px; border: 1px solid var(--border); object-fit: cover; }
+        .alert-box { display: none; background-color: #fff5f5; color: var(--danger); border: 1px solid #feb2b2; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; font-weight: bold; text-align: center; }
+
+        button { width: 100%; padding: 14px; background: #34495e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #2c3e50; }
+
+        /* 篩選器 */
+        .filter-section { margin-top: 25px; }
+        .filter-title { font-size: 15px; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
+        .filter-buttons { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 5px; }
+        .filter-btn { background: #e2e8f0; color: #4a5568; padding: 8px 12px; font-size: 13px; border-radius: 20px; width: auto; font-weight: normal; flex-shrink: 0; cursor: pointer; border: none; }
+        .filter-btn.active { background: #3498db; color: white; font-weight: bold; }
+
+        /* 圖表 */
+        .chart-container { margin-top: 15px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
+        canvas { width: 100%; height: 200px; display: block; }
+
+        .history { margin-top: 25px; }
+        .history h3 { font-size: 16px; margin-bottom: 10px; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; color: var(--primary); }
+        .list-container { max-height: 300px; overflow-y: auto; }
+        
+        .record-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; margin-bottom: 10px; border-radius: 10px; background: #fff; border-left: 6px solid var(--success); box-shadow: 0 2px 6px rgba(0,0,0,0.03); min-width: 0; }
+        .record-card.high { border-left-color: var(--danger); background-color: #fffaf0; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; min-width: 0; }
+        .card-time { font-size: 12px; color: #718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-tag { padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #e2e8f0; white-space: nowrap; flex-shrink: 0; }
+        .record-card.high .card-tag { background: #fed7d7; color: var(--danger); }
+        .card-body { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; min-width: 0; }
+        .card-left { flex: 1; min-width: 0; }
+        .sugar-value { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .record-card.high .sugar-value { color: var(--danger); }
+        .sugar-unit { font-size: 13px; font-weight: normal; color: #718096; }
+        .note-text { font-size: 13px; color: #4a5568; margin-top: 4px; word-break: break-all; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; }
+        .warning-text { color: var(--danger); font-size: 11px; font-weight: bold; margin-top: 2px; }
+        .card-img { width: 55px; height: 55px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; cursor: pointer; }
+        .delete-btn { background: none; border: none; color: #a0aec0; cursor: pointer; font-size: 18px; padding: 0 4px; width: auto; flex-shrink: 0; }
+        .delete-btn:hover { color: var(--danger); }
+
+        .backup-actions { display: flex; gap: 8px; margin-top: 20px; border-top: 1px dashed var(--border); padding-top: 15px; }
+        .btn-secondary { background: #718096; padding: 10px; font-size: 13px; border-radius: 6px; color: white; border: none; cursor: pointer; }
+        .btn-secondary:hover { background: #4a5568; }
+        #file-input { display: none; }
+        .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000; }
+        .lightbox img { max-width: 95%; max-height: 90%; border-radius: 8px; }
+        @media (max-width: 400px) { .backup-actions { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>每日血糖紀錄本</h1>
+        <div class="alert-box" id="realtime-alert"></div>
+        <form id="sugar-form">
+            <div class="form-group">
+                <label>量測狀態</label>
+                <div class="status-group">
+                    <label><input type="radio" name="state" value="before" checked> 飯前空腹</label>
+                    <label><input type="radio" name="state" value="after"> 飯後 2 小時</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="time">量測時間</label>
+                <input type="datetime-local" id="time" required>
+            </div>
+            <div class="form-group">
+                <label for="sugar">量測血糖值 (mg/dL)</label>
+                <input type="number" id="sugar" placeholder="請輸入血糖數值" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="note">飲食備註 (這餐吃了什麼)</label>
+                <textarea id="note" placeholder="例如：燕麥、水煮蛋、雞胸肉..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="photo">上傳此餐照片 (選填)</label>
+                <input type="file" id="photo" accept="image/*">
+                <div class="preview-container" id="preview-box">
+                    <img src="" class="preview-img" id="upload-preview" alt="預覽圖">
+                </div>
+            </div>
+            <button type="submit">儲存今日紀錄</button>
+        </form>
+
+        <div class="filter-section">
+            <div class="filter-title">時間範圍篩選：</div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="changeFilter('all', this)">全部</button>
+                <button class="filter-btn" onclick="changeFilter(7, this)">近 7 天</button>
+                <button class="filter-btn" onclick="changeFilter(15, this)">近 15 天</button>
+                <button class="filter-btn" onclick="changeFilter(30, this)">近 30 天</button>
+                <button class="filter-btn" onclick="changeFilter(60, this)">近 60 天</button>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+
+        <div class="history">
+            <h3>歷史紀錄明細</h3>
+            <div class="list-container" id="record-list"></div>
+        </div>
+        <div class="backup-actions">
+            <button type="button" class="btn-secondary" id="export-btn">匯出數據 (JSON)</button>
+            <button type="button" class="btn-secondary" id="import-trigger-btn">匯入數據 (JSON)</button>
+            <input type="file" id="file-input" accept=".json">
+        </div>
+    </div>
+    <div class="lightbox" id="lightbox" onclick="this.style.display='none'"><img src="" id="lightbox-img"></div>
+
+    <script>
+        const sugarForm = document.getElementById('sugar-form');
+        const timeInput = document.getElementById('time');
+        const sugarInput = document.getElementById('sugar');
+        const noteInput = document.getElementById('note');
+        const photoInput = document.getElementById('photo');
+        const previewBox = document.getElementById('preview-box');
+        const uploadPreview = document.getElementById('upload-preview');
+        const realtimeAlert = document.getElementById('realtime-alert');
+        const recordList = document.getElementById('record-list');
+        const exportBtn = document.getElementById('export-btn');
+        const importTriggerBtn = document.getElementById('import-trigger-btn');
+        const fileInput = document.getElementById('file-input');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const canvas = document.getElementById('trendChart');
+
+        let sugarRecords = JSON.parse(localStorage.getItem('sugarRecords')) || [];
+        let currentBase64Image = "";
+        let currentFilter = 'all';
+
+        function setDefaultTime() {
+const now = new Date();
+now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+timeInput.value = now.toISOString().slice(0, 16);
+}
+function checkSugarWarning() {
+const val = parseInt(sugarInput.value);
+if (!val) { realtimeAlert.style.display = 'none'; return; }
+const state = document.querySelector('input[name="state"]:checked').value;
+if ((state === 'before' && val > 100) || (state === 'after' && val > 180)) {
+realtimeAlert.style.display = 'block';
+realtimeAlert.innerText = ⚠️ 提示：當前輸入的${state === 'before' ? '飯前' : '飯後'}血糖 (${val} mg/dL) 已超標！;
+} else { realtimeAlert.style.display = 'none'; }
+}
+sugarInput.addEventListener('input', checkSugarWarning);
+document.querySelectorAll('input[name="state"]').forEach(r => r.addEventListener('change', checkSugarWarning));
+photoInput.addEventListener('change', function(e) {
+const file = e.target.files[0];
+if (file) {
+const reader = new FileReader();
+reader.onload = function(evt) {
+currentBase64Image = evt.target.result;
+uploadPreview.src = currentBase64Image;
+previewBox.style.display = 'block';
+};
+reader.readAsDataURL(file);
+} else { currentBase64Image = ""; previewBox.style.display = 'none'; }
+});
+sugarForm.addEventListener('submit', function(e) {
+e.preventDefault();
+const state = document.querySelector('input[name="state"]:checked').value;
+const val = parseInt(sugarInput.value);
+const isHigh = (state === 'before' && val > 100) || (state === 'after' && val > 180);
+// 格式化顯示時間
+const formattedTime = timeInput.value.replace('T', ' ');
+const newRecord = {
+id: Date.now(),
+state: state,
+time: formattedTime,
+sugar: val,
+note: noteInput.value.trim(),
+image: currentBase64Image,
+isHigh: isHigh
+};
+sugarRecords.unshift(newRecord);
+localStorage.setItem('sugarRecords', JSON.stringify(sugarRecords));
+updateUI();
+sugarInput.value = ''; noteInput.value = ''; photoInput.value = '';
+currentBase64Image = ''; previewBox.style.display = 'none'; realtimeAlert.style.display = 'none';
+setDefaultTime();
+});
+function getFilteredRecords() {
+if (currentFilter === 'all' || sugarRecords.length === 0) return sugarRecords;
+// 以目前最新的一筆紀錄時間為推算基準點
+const baseTimeStr = sugarRecords[0].time.replace(' ', 'T');
+const baseDate = new Date(baseTimeStr);
+const cutoffTime = baseDate.getTime() - (currentFilter * 24 * 60 * 60 * 1000);
+return sugarRecords.filter(rec => {
+const recTime = new Date(rec.time.replace(' ', 'T')).getTime();
+return recTime >= cutoffTime;
+});
+}
+window.changeFilter = function(days, btn) {
+document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+btn.classList.add('active');
+currentFilter = days;
+updateUI();
+}
+function drawChart(filteredData) {
+const ctx = canvas.getContext('2d');
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+if (filteredData.length === 0) return;
+// 圖表需要由舊到新正序排列
+const sorted = [...filteredData].sort((a,b) => new Date(a.time.replace(' ','T')) - new Date(b.time.replace(' ','T')));
+const paddingLeft = 45, paddingRight = 25, paddingTop = 30, paddingBottom = 40;
+const chartWidth = canvas.width - paddingLeft - paddingRight;
+const chartHeight = canvas.height - paddingTop - paddingBottom;
+const sugars = sorted.map(d => d.sugar);
+let maxSugar = Math.max(...sugars, 200);
+let minSugar = Math.min(...sugars, 70);
+maxSugar = Math.ceil(maxSugar / 20) * 20;
+minSugar = Math.floor(minSugar / 20) * 20;
+// 畫背景橫線
+ctx.strokeStyle = '#f0f0f0';
+ctx.lineWidth = 1;
+ctx.fillStyle = '#718096';
+ctx.font = '11px Arial';
+ctx.textAlign = 'right';
+ctx.textBaseline = 'middle';
+const lines = 4;
+for(let i=0; i<=lines; i++) {
+const yVal = minSugar + ((maxSugar - minSugar) / lines) * i;
+const y = canvas.height - paddingBottom - ((yVal - minSugar) / (maxSugar - minSugar)) * chartHeight;
+ctx.beginPath(); ctx.moveTo(paddingLeft, y); ctx.lineTo(canvas.width - paddingRight, y); ctx.stroke();
+ctx.fillText(Math.round(yVal), paddingLeft - 7, y);
+}
+const getX = (index) => sorted.length === 1 ? paddingLeft + chartWidth/2 : paddingLeft + (index / (sorted.length - 1)) * chartWidth;
+const getY = (val) => canvas.height - paddingBottom - ((val - minSugar) / (maxSugar - minSugar)) * chartHeight;
+// 畫折線
+ctx.beginPath();
+ctx.strokeStyle = '#3498db';
+ctx.lineWidth = 2.5;
+sorted.forEach((d, i) => { if(i===0) ctx.moveTo(getX(i), getY(d.sugar)); else ctx.lineTo(getX(i), getY(d.sugar)); });
+ctx.stroke();
+// 畫數據點與文字
+sorted.forEach((d, i) => {
+const x = getX(i), y = getY(d.sugar);
+ctx.beginPath();
+ctx.arc(x, y, 4, 0, 2 * Math.PI);
+ctx.fillStyle = d.isHigh ? 'var(--danger)' : 'var(--success)';
+ctx.fill();
+ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+ctx.fillStyle = d.isHigh ? 'var(--danger)' : '#2c3e50';
+ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
+ctx.fillText(d.sugar, x, y - 8);
+// 畫時間標籤 (修復 substring 錯誤，安全擷取月/日)
+const datePart = d.time.substring(5, 10);
+ctx.save();
+ctx.translate(x, canvas.height - paddingBottom + 12);
+ctx.rotate(-Math.PI / 6);
+ctx.fillStyle = '#718096'; ctx.font = '10px Arial'; ctx.textAlign = 'right';
+ctx.fillText(datePart, 0, 0);
+ctx.restore();
+});
+}
+function renderRecords(filteredData) {
+recordList.innerHTML = '';
+if (filteredData.length === 0) { recordList.innerHTML = '此範圍內無量測紀錄'; return; }
+filteredData.forEach(rec => {
+const card = document.createElement('div');
+card.classList.add('record-card'); if (rec.isHigh) card.classList.add('high');
+const stateText = rec.state === 'before' ? '飯前空腹' : '飯後 2 小時';
+card.innerHTML = <div class="card-header"> <span class="card-time">${rec.time}</span> <div style="display:flex; align-items:center; gap:8px;"> <span class="card-tag">${stateText}</span> <button class="delete-btn" onclick="deleteRecord(${rec.id})">×</button> </div> </div> <div class="card-body"> <div class="card-left"> <div class="sugar-value">${rec.sugar} <span class="sugar-unit">mg/dL</span></div> ${rec.isHigh ?⚠️ 血糖偏高 (${rec.state === 'before' ? '>100' : '>180'}): ''} ${rec.note ?${rec.note}: ''} </div> ${rec.image ?: ''} </div>;
+recordList.appendChild(card);
+});
+}
+function updateUI() { const data = getFilteredRecords(); drawChart(data); renderRecords(data); }
+window.deleteRecord = function(id) { if (confirm('確定要刪除這筆紀錄嗎？')) { sugarRecords = sugarRecords.filter(r => r.id !== id); localStorage.setItem('sugarRecords', JSON.stringify(sugarRecords)); updateUI(); } };
+window.zoomImage = function(src) { lightboxImg.src = src; lightbox.style.display = 'flex'; };
+exportBtn.addEventListener('click', () => {
+if (sugarRecords.length === 0) { alert('沒有資料可以匯出。'); return; }
+const blob = new Blob([JSON.stringify(sugarRecords, null, 2)], { type: 'application/json' });
+const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+a.download = blood_sugar_records_${new Date().toISOString().split('T')[0]}.json;
+a.click();
+});
+importTriggerBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+const file = e.target.files[0]; if (!file) return;
+const reader = new FileReader();
+reader.onload = function(evt) {
+try {
+const parsed = JSON.parse(evt.target.result);
+if (Array.isArray(parsed) && confirm('匯入將會覆蓋現有紀錄，確定繼續？')) {
+sugarRecords = parsed; localStorage.setItem('sugarRecords', JSON.stringify(sugarRecords)); updateUI(); alert('匯入成功！');
+} else if(!Array.isArray(parsed)) { alert('檔案格式不正確。'); }
+} catch(e) { alert('讀取失敗。'); }
+fileInput.value = '';
+};
+reader.readAsText(file);
+});
+function initCanvas() {
+const dpr = window.devicePixelRatio || 1;
+canvas.width = canvas.clientWidth * dpr;
+canvas.height = canvas.clientHeight * dpr;
+canvas.getContext('2d').scale(dpr, dpr);
+}
+window.addEventListener('resize', () => { initCanvas(); updateUI(); });
+setDefaultTime();
+initCanvas();
+updateUI();
