@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國小數學趣味秤重 - RWD 星星過關版</title>
+    <style>
+        /* 基礎版面與 RWD 設定 */
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background-color: #f2f7f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 650px;
+            width: 100%;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h2 { 
+            color: #2c3e50; 
+            margin: 0 0 8px 0;
+            font-size: clamp(20px, 5vw, 26px);
+        }
+        
+        .target-tip {
+            color: #e67e22;
+            font-size: clamp(15px, 4vw, 18px);
+            font-weight: bold;
+            margin-bottom: 25px;
+        }
+
+        /* RWD 水果展示架 */
+        .fruit-shelf {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #fffdf3;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px dashed #f1c40f;
+            margin-bottom: 25px;
+        }
+
+        .fruit-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: clamp(14px, 3.5vw, 16px);
+            font-weight: bold;
+            color: #34495e;
+            width: 75px;
+        }
+
+        .fruit-icon {
+            font-size: clamp(35px, 10vw, 45px);
+            margin-bottom: 5px;
+            transition: transform 0.2s;
+        }
+
+        /* 物理拋物線掉落動畫 */
+        .fly-to-box {
+            animation: dropIntoBox 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        @keyframes dropIntoBox {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            30% { transform: translateY(-40px) scale(1.2); }
+            100% { transform: translateY(180px) scale(0.5); opacity: 0; }
+        }
+
+        /* 箱子與重量顯示 */
+        .box-area {
+            margin: 15px 0;
+            position: relative;
+            height: 110px;
+        }
+
+        .box {
+            font-size: clamp(60px, 15vw, 75px);
+            line-height: 1;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        
+        /* 箱子彈跳效果 */
+        .box-bounce {
+            animation: boxBounce 0.3s ease-in-out;
+        }
+        @keyframes boxBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1) translateY(5px); }
+        }
+
+        .counter {
+            font-size: clamp(18px, 4.5vw, 24px);
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 10px;
+        }
+        
+        .counter span {
+            color: #e74c3c;
+            font-size: clamp(24px, 6vw, 32px);
+        }
+
+        /* 答題回饋與公式顯示 */
+        .result-message {
+            margin-top: 15px;
+            font-size: clamp(16px, 4vw, 20px);
+            font-weight: bold;
+            min-height: 35px;
+            line-height: 1.5;
+        }
+        .formula-text {
+            font-size: clamp(14px, 3.5vw, 16px);
+            color: #7f8c8d;
+            margin-top: 5px;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .text-correct { color: #27ae60; }
+        .text-wrong { color: #c0392b; }
+
+        /* RWD 題目選項按鈕佈局 */
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        /* 按鈕基礎 3D 質感與動畫 */
+        .btn-option {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 10px;
+            font-size: clamp(15px, 3.8vw, 18px);
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 5px 0 #2980b9;
+            outline: none;
+        }
+
+        .btn-option:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0 #216f9e;
+        }
+
+        .btn-option:active {
+            transform: translateY(5px);
+            box-shadow: 0 0px 0 #216f9e;
+        }
+
+        /* 答題狀態按鈕變色 */
+        .btn-correct {
+            background-color: #2ecc71 !important;
+            box-shadow: 0 5px 0 #27ae60 !important;
+            animation: successPulse 0.5s infinite alternate;
+        }
+        
+        .btn-wrong {
+            background-color: #e74c3c !important;
+            box-shadow: 0 5px 0 #c0392b !important;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes successPulse { from { transform: scale(1); } to { transform: scale(1.04); } }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        /* 再試一次控制區與按鈕 */
+        .control-area {
+            margin-top: 25px;
+            min-height: 50px;
+        }
+
+        .btn-retry {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #1a252f;
+            transition: all 0.15s ease;
+            display: none;
+        }
+        .btn-retry:hover { background-color: #1a252f; transform: translateY(-2px); box-shadow: 0 7px 0 #11171d; }
+        .btn-retry:active { transform: translateY(5px); box-shadow: 0 0px 0 #11171d; }
+
+        /* 掉落星星的 CSS 樣式與動畫 */
+        .star {
+            position: fixed;
+            color: #f1c40f;
+            font-size: 24px;
+            pointer-events: none;
+            z-index: 9999;
+            animation: starFall 1.5s linear forwards;
+        }
+
+        @keyframes starFall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🍎 小朋友秤秤看：水果裝箱大挑戰 🍌</h2>
+    <div class="target-tip">🎯 請選出剛好加起來等於 50g 的組合！</div>
+    
+    <!-- 水果貨架 -->
+    <div class="fruit-shelf">
+        <div class="fruit-item" id="fruit-A"><span class="fruit-icon">🍎</span>A 蘋果<br>10g</div>
+        <div class="fruit-item" id="fruit-B"><span class="fruit-icon">🥑</span>B 芭樂<br>15g</div>
+        <div class="fruit-item" id="fruit-C"><span class="fruit-icon">🍐</span>C 梨子<br>15g</div>
+        <div class="fruit-item" id="fruit-D"><span class="fruit-icon">🍌</span>D 香蕉<br>25g</div>
+    </div>
+
+    <!-- 秤重箱子區 -->
+    <div class="box-area">
+        <div class="box" id="main-box">📦</div>
+        <div class="counter">總重量：<span id="weight-display">0</span> g</div>
+    </div>
+
+    <!-- 答題與計算公式回饋 -->
+    <div class="result-message" id="result-text"></div>
+
+    <!-- 題目選項 -->
+    <div class="options-grid" id="options-container">
+        <button class="btn-option" onclick="selectOption([10, 15, 15], ['10g', '15g', '15g'], ['A', 'B', 'C'], false, this)">1. A + B + C</button>
+        <button class="btn-option" onclick="selectOption([10, 15, 25], ['10g', '15g', '25g'], ['A', 'B', 'D'], true, this)">2. A + B + D</button>
+        <button class="btn-option" onclick="selectOption([15, 15, 25], ['15g', '15g', '25g'], ['B', 'C', 'D'], false, this)">3. B + C + D</button>
+        <button class="btn-option" onclick="selectOption([15, 25], ['15g', '25g'], ['C', 'D'], false, this)">4. C + D</button>
+    </div>
+
+    <!-- 再試一次功能區 -->
+    <div class="control-area">
+        <button class="btn-retry" id="retry-btn" onclick="resetScene()">🔄 再試一次</button>
+    </div>
+</div>
+
+<script>
+let isAnimating = false; 
+
+function selectOption(weights, nameArray, fruitIds, isCorrect, buttonElement) {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    clearFeedbacks();
+    disableButtons(true);
+
+    fruitIds.forEach(id => {
+        document.getElementById(`fruit-${id}`).classList.add('fly-to-box');
+    });
+
+    let currentWeight = 0;
+    let targetWeight = weights.reduce((sum, w) => sum + w, 0);
+    let display = document.getElementById('weight-display');
+    let box = document.getElementById('main-box');
+    
+    let timer = setInterval(() => {
+        if (currentWeight < targetWeight) {
+            currentWeight += 1;
+            display.innerText = currentWeight;
+        } else {
+            clearInterval(timer);
+            box.classList.add('box-bounce');
+            
+            setTimeout(() => {
+                showFinalFeedback(isCorrect, targetWeight, nameArray, buttonElement);
+                document.getElementById('retry-btn').style.display = 'inline-block';
+                isAnimating = false;
+            }, 200);
+        }
+    }, 15);
+}
+
+function showFinalFeedback(isCorrect, total, nameArray, btn) {
+    let resultText = document.getElementById('result-text');
+    let formula = `計算公式：${nameArray.join(' + ')} = ${total}g`;
+
+    if (isCorrect) {
+        btn.classList.add('btn-correct');
+        resultText.innerHTML = `<span class="text-correct">🎉 太棒了！${total}g 剛剛好，你答對囉！</span><br><span class="formula-text">${formula} 🎯</span>`;
+        createFallingStars();
+    } else {
+        btn.classList.add('btn-wrong');
+        resultText.innerHTML = `<span class="text-wrong">❌ 噢不，這樣加起來是 ${total}g 喔，再挑戰一次！</span><br><span class="formula-text">${formula}</span>`;
+    }
+}
+
+function createFallingStars() {
+    const starCount = 30;
+    for (let i = 0; i < starCount; i++) {
+        setTimeout(() => {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.innerText = ['✨', '⭐'][Math.floor(Math.random() * 2)];
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.fontSize = Math.random() * 15 + 15 + 'px';
+            star.style.animationDuration = Math.random() * 1 + 1 + 's';
+            document.body.appendChild(star);
+            setTimeout(() => { star.remove(); }, 2000);
+        }, i * 50);
+    }
+}
+
+function disableButtons(status) {
+    let buttons = document.querySelectorAll('.btn-option');
+    buttons.forEach(btn => btn.disabled = status);
+}
+
+function resetScene() {
+    ['A', 'B', 'C', 'D'].forEach(id => {
+        document.getElementById(`fruit-${id}`).classList.remove('fly-to-box');
+    });
+    
+    let buttons = document.querySelectorAll('.btn-option');
+    buttons.forEach(btn => {
+        btn.classList.remove('btn-correct', 'btn-wrong');
+    });
+    disableButtons(false);
+    
+    document.getElementById('main-box').classList.remove('box-bounce');
+    document.getElementById('result-text').innerText = '';
+    document.getElementById('weight-display').innerText = '0';
+    document.getElementById('retry-btn').style.display = 'none';
+}
+
+function clearFeedbacks() {
+    let buttons = document.querySelectorAll('.btn-option');
+    buttons.forEach(btn => btn.classList.remove('btn-correct', 'btn-wrong'));
+    document.getElementById('main-box').classList.remove('box-bounce');
+    document.getElementById('result-text').innerText = '';
+}
+</script>
+
+</body>
+</html>
